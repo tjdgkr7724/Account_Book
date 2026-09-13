@@ -3,7 +3,9 @@ from datetime import date
 
 from django.contrib import messages
 from django.contrib.auth.hashers import make_password
+from django.core.exceptions import ValidationError
 from django.db import IntegrityError, transaction
+from django.http import JsonResponse
 from django.middleware.csrf import rotate_token
 from django.shortcuts import redirect, render
 from django.utils import timezone
@@ -15,12 +17,15 @@ from .models import UserInfo
 
 
 def session_user(request):
-    user_id = request.session.get("worklogs_user_id")
-    if user_id is None:
+    user_uuid = request.session.get("worklogs_user_uuid")
+    if user_uuid is None:
         return None
-    user = UserInfo.objects.filter(pk=user_id, birth_date__isnull=False).first()
+    try:
+        user = UserInfo.objects.filter(uuid=user_uuid, birth_date__isnull=False).first()
+    except (ValidationError, ValueError, TypeError):
+        user = None
     if user is None:
-        request.session.pop("worklogs_user_id", None)
+        request.session.pop("worklogs_user_uuid", None)
     return user
 
 
@@ -42,7 +47,8 @@ def login_view(request):
             make_password(form.cleaned_data["password"])
         if password_ok and user.birth_date and user.birth_date.strftime("%y%m%d") == form.cleaned_data["birth_date"]:
             request.session.cycle_key()
-            request.session["worklogs_user_id"] = user.pk
+            request.session.pop("worklogs_user_id", None)
+            request.session["worklogs_user_uuid"] = str(user.uuid)
             rotate_token(request)
             return redirect("calendar")
         form.add_error(None, "ID, 비밀번호 또는 생년월일이 일치하지 않습니다.")
@@ -78,7 +84,8 @@ def logout_view(request):
 
 @never_cache
 def calendar_view(request):
-    if not session_user(request):
+    user = session_user(request)
+    if user is None:
         return redirect("login")
     today = timezone.localdate()
     try:
@@ -99,5 +106,26 @@ def calendar_view(request):
         "previous": previous,
         "following": following,
         "weeks": weeks,
+        "work_records": user.work_records.filter(work_date=selected),
         "weekdays": ["일", "월", "화", "수", "목", "금", "토"],
     })
+
+
+@never_cache
+@require_http_methods(["GET"])
+def work_records_view(request):
+    user = session_user(request)
+    if user is None:
+        return JsonResponse({"error": "로그인이 필요합니다."}, status=401)
+    # Ownership comes exclusively from the authenticated session, never query parameters.
+    records = user.work_records.all()
+    if "date" in request.GET:
+        try:
+            selected = date.fromisoformat(request.GET["date"])
+        except (ValueError, TypeError):
+            return JsonResponse({"error": "날짜 형식은 YYYY-MM-DD입니다."}, status=400)
+        records = records.filter(work_date=selected)
+    return JsonResponse({"user_uuid": str(user.uuid), "records": list(records.values(
+        "id", "company_name", "workplace", "work_date", "industry", "amount",
+        "status", "notes", "created_at", "updated_at",
+    ))})

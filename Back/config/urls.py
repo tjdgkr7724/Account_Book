@@ -17,7 +17,7 @@ Including another URLconf
 
 from django.contrib import admin
 from django.urls import path
-from worklogs.views import calendar_view, home_view, login_view, logout_view, signup_view
+from worklogs.views import calendar_view, home_view, login_view, logout_view, signup_view, work_records_view
 
 urlpatterns = [
     path("", home_view, name="home"),
@@ -25,5 +25,6 @@ urlpatterns = [
     path("signup/", signup_view, name="signup"),
     path("logout/", logout_view, name="logout"),
     path("calendar/", calendar_view, name="calendar"),
+    path("api/work-records/", work_records_view, name="work-records"),
     path("admin/", admin.site.urls),
 ]

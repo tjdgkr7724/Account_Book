@@ -27,7 +27,7 @@
         </table>
         <div class="calendar-footer"><span class="hint-icon" aria-hidden="true">↗</span> 날짜를 선택해 그날의 업무 기록을 확인하세요.</div>
       </section>
-      <aside class="details" aria-labelledby="detail-title"><div class="detail-heading"><p class="eyebrow">DAILY RECORD</p><h2 id="detail-title">{{ selected|date:"n월 j일" }} <span>{{ selected|date:"l" }}</span></h2></div><div class="empty-state"><div class="empty-icon" aria-hidden="true">▤</div><h3>아직 기록된 업무가 없어요</h3><p>하루의 업무와 일급을<br>이곳에서 모아볼 수 있어요.</p><span class="coming-soon">업무 등록 기능 준비 중</span></div><div class="detail-note"><strong>나의 업무를 기록하는 습관</strong><p>회사, 근무지, 일급과 입금 상태까지<br>날짜별로 깔끔하게 관리해 보세요.</p></div></aside>
+      <aside class="details" aria-labelledby="detail-title"><div class="detail-heading"><p class="eyebrow">DAILY RECORD</p><h2 id="detail-title">{{ selected|date:"n월 j일" }} <span>{{ selected|date:"l" }}</span></h2></div>{% for record in work_records %}<article class="detail-note"><strong>{{ record.company_name }}</strong><p>{{ record.workplace }} · {{ record.industry }}</p><p>{{ record.amount }}원 · {% if record.status %}입금 완료{% else %}미입금{% endif %}</p>{% if record.notes %}<p>{{ record.notes|linebreaksbr }}</p>{% endif %}</article>{% empty %}<div class="empty-state"><div class="empty-icon" aria-hidden="true">▤</div><h3>아직 기록된 업무가 없어요</h3><p>하루의 업무와 일급을<br>이곳에서 모아볼 수 있어요.</p><span class="coming-soon">업무 등록 기능 준비 중</span></div>{% endfor %}<div class="detail-note"><strong>나의 업무를 기록하는 습관</strong><p>회사, 근무지, 일급과 입금 상태까지<br>날짜별로 깔끔하게 관리해 보세요.</p></div></aside>
     </div>
     <footer class="page-footer">일의 기록 <span>매일의 수고가 빠짐없이 남도록.</span></footer>
   </main>

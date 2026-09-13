@@ -35,4 +35,42 @@ class PaymentMigrationTests(TransactionTestCase):
             self.assertEqual(work.objects.get(company_name="paid").status, "paid")
             self.assertEqual(work.objects.get(company_name="unpaid").status, "unpaid")
         finally:
-            MigrationExecutor(connection).migrate(new)
+            executor = MigrationExecutor(connection)
+            executor.migrate(executor.loader.graph.leaf_nodes())
+
+
+class WorkOwnerUuidMigrationTests(TransactionTestCase):
+    def test_ownership_survives_forward_and_reverse(self):
+        old = [("worklogs", "0006_userinfo_uuid")]
+        new = [("worklogs", "0007_workinfo_user_uuid")]
+        executor = MigrationExecutor(connection)
+        executor.migrate(old)
+        try:
+            apps = executor.loader.project_state(old).apps
+            users = apps.get_model("worklogs", "UserInfo")
+            records = apps.get_model("worklogs", "WorkInfo")
+            owners = {}
+            for login_id in ("alice", "bob"):
+                user = users.objects.create(id=login_id, name=login_id)
+                owners[login_id] = user.uuid
+                records.objects.create(user=user, company_name=login_id, workplace="서울",
+                    work_date=date(2026, 9, 14), industry="개발", amount=100000)
+            executor = MigrationExecutor(connection)
+            executor.migrate(new)
+            apps = executor.loader.project_state(new).apps
+            records = apps.get_model("worklogs", "WorkInfo")
+            users = apps.get_model("worklogs", "UserInfo")
+            for login_id, owner_uuid in owners.items():
+                record = records.objects.get(company_name=login_id)
+                self.assertEqual(record.user_id, owner_uuid)
+                self.assertEqual(record.user.pk, login_id)
+                self.assertEqual(list(users.objects.get(pk=login_id).work_records.values_list(
+                    "company_name", flat=True)), [login_id])
+            executor = MigrationExecutor(connection)
+            executor.migrate(old)
+            records = executor.loader.project_state(old).apps.get_model("worklogs", "WorkInfo")
+            for login_id in owners:
+                self.assertEqual(records.objects.get(company_name=login_id).user_id, login_id)
+        finally:
+            executor = MigrationExecutor(connection)
+            executor.migrate(executor.loader.graph.leaf_nodes())

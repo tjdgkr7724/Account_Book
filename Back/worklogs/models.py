@@ -1,8 +1,11 @@
+import uuid
+
 from django.contrib.auth.hashers import check_password, make_password
 from django.db import models
 
 
 class UserInfo(models.Model):
+    uuid         = models.UUIDField(default=uuid.uuid4, unique=True, editable=False)
     id           = models.CharField("로그인 ID", max_length=150, primary_key=True)
     name         = models.CharField("이름", max_length=100)
     password     = models.CharField("비밀번호 해시", max_length=128, editable=False, default="!")
@@ -25,7 +28,8 @@ class UserInfo(models.Model):
 
 class WorkInfo(models.Model):
     user = models.ForeignKey(
-        UserInfo, verbose_name="사용자", on_delete=models.PROTECT, related_name="work_records"
+        UserInfo, to_field="uuid", db_column="user_uuid", verbose_name="사용자",
+        on_delete=models.PROTECT, related_name="work_records"
     )
     company_name = models.CharField              ("업체명", max_length=200)
     workplace    = models.CharField              ("근무지", max_length=255)
