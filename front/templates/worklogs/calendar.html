@@ -1,0 +1,34 @@
+{% load static %}
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{{ selected|date:"Y년 n월" }} 달력 · 일의 기록</title>
+  <link rel="stylesheet" href="{% static 'worklogs/calendar.css' %}">
+</head>
+<body>
+  <header class="header">
+    <a class="brand" href="{% url 'calendar' %}"><span class="brand-icon" aria-hidden="true">▦</span> 일의 기록 <span class="brand-sub">ACCOUNT BOOK</span></a>
+    <span class="header-caption">차곡차곡 쌓이는 나의 하루</span>
+  </header>
+  <main>
+    <div class="intro"><div><p class="eyebrow">MY WORK CALENDAR</p><h1>업무 달력</h1><p class="description">일한 날부터 입금까지, 한눈에 확인하세요.</p></div><span class="date-tag">오늘 · {{ today|date:"n월 j일 l" }}</span></div>
+    <div class="workspace">
+      <section class="calendar" aria-label="월별 업무 달력">
+        <div class="calendar-toolbar">
+          <div class="month-navigation"><h2>{{ selected|date:"Y년 n월" }}</h2><nav aria-label="달력 월 이동"><a class="arrow" href="?date={{ previous|date:'Y-m-d' }}" aria-label="이전 달">‹</a><a class="arrow" href="?date={{ following|date:'Y-m-d' }}" aria-label="다음 달">›</a></nav><a class="today-link" href="{% url 'calendar' %}">오늘</a></div>
+          <div class="legend"><span><i class="pending"></i>미입금</span><span><i class="paid"></i>입금 완료</span></div>
+        </div>
+        <table><caption class="sr-only">{{ selected|date:"Y년 n월" }} 달력. 날짜를 선택하면 업무 내용을 확인할 수 있습니다.</caption>
+          <thead><tr>{% for weekday in weekdays %}<th scope="col">{{ weekday }}</th>{% endfor %}</tr></thead>
+          <tbody>{% for week in weeks %}<tr>{% for day in week %}<td class="{% if day.month != selected.month %}outside {% endif %}{% if day == selected %}selected{% endif %}"><a class="day" href="?date={{ day|date:'Y-m-d' }}" aria-label="{{ day|date:'Y년 n월 j일' }}{% if day == today %}, 오늘{% endif %}" {% if day == selected %}aria-current="date"{% endif %}><span class="day-number {% if day == today %}is-today{% endif %}">{{ day.day }}</span>{% if day == today %}<span class="today-label">오늘</span>{% endif %}</a></td>{% endfor %}</tr>{% endfor %}</tbody>
+        </table>
+        <div class="calendar-footer"><span class="hint-icon" aria-hidden="true">↗</span> 날짜를 선택해 그날의 업무 기록을 확인하세요.</div>
+      </section>
+      <aside class="details" aria-labelledby="detail-title"><div class="detail-heading"><p class="eyebrow">DAILY RECORD</p><h2 id="detail-title">{{ selected|date:"n월 j일" }} <span>{{ selected|date:"l" }}</span></h2></div><div class="empty-state"><div class="empty-icon" aria-hidden="true">▤</div><h3>아직 기록된 업무가 없어요</h3><p>하루의 업무와 일급을<br>이곳에서 모아볼 수 있어요.</p><span class="coming-soon">업무 등록 기능 준비 중</span></div><div class="detail-note"><strong>나의 업무를 기록하는 습관</strong><p>회사, 근무지, 일급과 입금 상태까지<br>날짜별로 깔끔하게 관리해 보세요.</p></div></aside>
+    </div>
+    <footer class="page-footer">일의 기록 <span>매일의 수고가 빠짐없이 남도록.</span></footer>
+  </main>
+</body>
+</html>

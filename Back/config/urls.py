@@ -17,7 +17,9 @@ Including another URLconf
 
 from django.contrib import admin
 from django.urls import path
+from worklogs.views import calendar_view
 
 urlpatterns = [
+    path("", calendar_view, name="calendar"),
     path("admin/", admin.site.urls),
 ]
