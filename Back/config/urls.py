@@ -17,9 +17,13 @@ Including another URLconf
 
 from django.contrib import admin
 from django.urls import path
-from worklogs.views import calendar_view
+from worklogs.views import calendar_view, home_view, login_view, logout_view, signup_view
 
 urlpatterns = [
-    path("", calendar_view, name="calendar"),
+    path("", home_view, name="home"),
+    path("login/", login_view, name="login"),
+    path("signup/", signup_view, name="signup"),
+    path("logout/", logout_view, name="logout"),
+    path("calendar/", calendar_view, name="calendar"),
     path("admin/", admin.site.urls),
 ]

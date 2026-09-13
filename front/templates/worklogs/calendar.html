@@ -6,11 +6,12 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>{{ selected|date:"Y년 n월" }} 달력 · 일의 기록</title>
   <link rel="stylesheet" href="{% static 'worklogs/calendar.css' %}">
+  <link rel="stylesheet" href="{% static 'worklogs/auth.css' %}">
 </head>
 <body>
   <header class="header">
     <a class="brand" href="{% url 'calendar' %}"><span class="brand-icon" aria-hidden="true">▦</span> 일의 기록 <span class="brand-sub">ACCOUNT BOOK</span></a>
-    <span class="header-caption">차곡차곡 쌓이는 나의 하루</span>
+    <form method="post" action="{% url 'logout' %}">{% csrf_token %}<button class="logout-button" type="submit">로그아웃</button></form>
   </header>
   <main>
     <div class="intro"><div><p class="eyebrow">MY WORK CALENDAR</p><h1>업무 달력</h1><p class="description">일한 날부터 입금까지, 한눈에 확인하세요.</p></div><span class="date-tag">오늘 · {{ today|date:"n월 j일 l" }}</span></div>

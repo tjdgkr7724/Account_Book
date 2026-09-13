@@ -1,0 +1,46 @@
+{% load static %}
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{% if signup %}ID 만들기{% else %}로그인{% endif %} · 일의 기록</title>
+  <link rel="stylesheet" href="{% static 'worklogs/calendar.css' %}">
+  <link rel="stylesheet" href="{% static 'worklogs/auth.css' %}">
+</head>
+<body>
+  <header class="header">
+    <a class="brand" href="{% url 'home' %}"><span class="brand-icon" aria-hidden="true">▦</span> 일의 기록 <span class="brand-sub">ACCOUNT BOOK</span></a>
+    <span class="header-caption">차곡차곡 쌓이는 나의 하루</span>
+  </header>
+  <main class="auth-main">
+    <section class="auth-card" aria-labelledby="auth-title">
+      <p class="eyebrow">MY WORK CALENDAR</p>
+      <h1 id="auth-title">{% if signup %}ID 만들기{% else %}로그인{% endif %}</h1>
+      <p class="description">{% if signup %}나의 업무 기록을 시작해 보세요.{% else %}오늘의 기록, 로그인하고 이어 가세요.{% endif %}</p>
+      {% for message in messages %}<p class="notice" role="status">{{ message }}</p>{% endfor %}
+      <form method="post" class="auth-form" novalidate>
+        {% csrf_token %}
+        {% if form.non_field_errors %}<div class="form-errors" role="alert">{{ form.non_field_errors }}</div>{% endif %}
+        {% for field in form %}
+          <div class="field">
+            {{ field.label_tag }}
+            {{ field }}
+            {% if field.help_text %}<p class="help" id="{{ field.auto_id }}_helptext">{{ field.help_text }}</p>{% endif %}
+            {% if field.errors %}<div class="field-errors" role="alert">{{ field.errors }}</div>{% endif %}
+          </div>
+        {% endfor %}
+        <button class="submit-button" type="submit">{% if signup %}가입하기{% else %}로그인{% endif %}</button>
+      </form>
+      {% if signup %}
+        <div class="auth-links"><a href="{% url 'login' %}">로그인으로 돌아가기</a></div>
+      {% else %}
+        <div class="auth-links"><a href="{% url 'signup' %}">ID 만들기</a><span aria-hidden="true">|</span><button type="button" id="password-help" aria-controls="password-notice" aria-expanded="false">비밀번호 찾기</button></div>
+        <p id="password-notice" class="notice" role="status" hidden>비밀번호 찾기는 준비 중입니다.</p>
+      {% endif %}
+    </section>
+    <p class="auth-footer">매일의 수고가 빠짐없이 남도록.</p>
+  </main>
+  <script src="{% static 'worklogs/auth.js' %}" defer></script>
+</body>
+</html>
