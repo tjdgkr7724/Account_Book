@@ -7,6 +7,7 @@ class UserInfo(models.Model):
     name         = models.CharField("이름", max_length=100)
     password     = models.CharField("비밀번호 해시", max_length=128, editable=False, default="!")
     phone_number = models.CharField("전화번호", max_length=30)
+    birth_date   = models.DateField("생년월일", null=True, blank=True)
 
     class Meta:
         db_table     = "user_info"
