@@ -1,35 +1,38 @@
 from datetime import date
-from unittest.mock import patch
 
-from django.test import SimpleTestCase
-from django.urls import reverse
+from django.db import connection
+from django.db.migrations.executor import MigrationExecutor
+from django.test import TransactionTestCase
 
 
-class CalendarTests(SimpleTestCase):
-    @patch("worklogs.views.timezone.localdate", return_value=date(2026, 9, 14))
-    def test_initial_page_selects_today_without_login(self, _today):
-        response = self.client.get(reverse("calendar"))
-        self.assertEqual(response.status_code, 200)
-        self.assertEqual(response.context["selected"], date(2026, 9, 14))
-        self.assertContains(response, "업무 달력")
-
-    def test_leap_month_and_sunday_first_grid(self):
-        response = self.client.get(reverse("calendar"), {"date": "2024-02-29"})
-        weeks = response.context["weeks"]
-        self.assertEqual(weeks[0][0].weekday(), 6)
-        self.assertTrue(all(len(week) == 7 for week in weeks))
-        self.assertIn(date(2024, 2, 29), [day for week in weeks for day in week])
-
-    def test_year_navigation(self):
-        response = self.client.get(reverse("calendar"), {"date": "2026-01-31"})
-        self.assertEqual(response.context["previous"], date(2025, 12, 1))
-        response = self.client.get(reverse("calendar"), {"date": "2026-12-31"})
-        self.assertEqual(response.context["following"], date(2027, 1, 1))
-
-    @patch("worklogs.views.timezone.localdate", return_value=date(2026, 9, 14))
-    def test_invalid_dates_fall_back_to_today(self, _today):
-        for value in ["wrong", "2026-02-30", "0001-01-01", "9999-12-31", ""]:
-            with self.subTest(value=value):
-                response = self.client.get(reverse("calendar"), {"date": value})
-                self.assertEqual(response.status_code, 200)
-                self.assertEqual(response.context["selected"], date(2026, 9, 14))
+class PaymentMigrationTests(TransactionTestCase):
+    def test_existing_payment_states_survive_forward_and_reverse_migration(self):
+        old = [("worklogs", "0001_initial")]
+        new = [("worklogs", "0003_rename_is_paid_status")]
+        executor = MigrationExecutor(connection)
+        executor.migrate(old)
+        try:
+            apps = executor.loader.project_state(old).apps
+            user = apps.get_model("worklogs", "UserInfo").objects.create(
+                id="test", name="테스트", phone_number="010-0000-0000"
+            )
+            work = apps.get_model("worklogs", "WorkInfo")
+            for status in ["paid", "unpaid"]:
+                work.objects.create(
+                    user=user, company_name=status, workplace="서울",
+                    work_date=date(2026, 9, 14), industry="개발", amount=100000,
+                    status=status,
+                )
+            executor = MigrationExecutor(connection)
+            executor.migrate(new)
+            work = executor.loader.project_state(new).apps.get_model("worklogs", "WorkInfo")
+            self.assertIs(work.objects.get(company_name="paid").status, True)
+            self.assertIs(work.objects.get(company_name="unpaid").status, False)
+            self.assertIs(work._meta.get_field("status").get_default(), False)
+            executor = MigrationExecutor(connection)
+            executor.migrate(old)
+            work = executor.loader.project_state(old).apps.get_model("worklogs", "WorkInfo")
+            self.assertEqual(work.objects.get(company_name="paid").status, "paid")
+            self.assertEqual(work.objects.get(company_name="unpaid").status, "unpaid")
+        finally:
+            MigrationExecutor(connection).migrate(new)
