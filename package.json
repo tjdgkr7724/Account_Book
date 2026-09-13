@@ -1,0 +1,7 @@
+{
+  "name": "account-book",
+  "private": true,
+  "scripts": {
+    "start": ".venv\\Scripts\\python.exe scripts/start.py"
+  }
+}
