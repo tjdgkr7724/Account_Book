@@ -5,9 +5,9 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>{{ selected|date:"Y년 n월" }} 달력 · 일의 기록</title>
-  <link rel="stylesheet" href="{% static 'worklogs/calendar.css' %}">
+  <link rel="stylesheet" href="{% static 'worklogs/calendar.css' %}?v=4">
   <link rel="stylesheet" href="{% static 'worklogs/auth.css' %}">
-  <link rel="stylesheet" href="{% static 'worklogs/work-form.css' %}">
+  <link rel="stylesheet" href="{% static 'worklogs/work-form.css' %}?v=3">
 </head>
 <body>
   <header class="header">
@@ -15,16 +15,26 @@
     <form method="post" action="{% url 'logout' %}">{% csrf_token %}<button class="logout-button" type="submit">로그아웃</button></form>
   </header>
   <main>
-    <div class="intro"><div><p class="eyebrow">MY WORK CALENDAR</p><h1>업무 달력</h1><p class="description">일한 날부터 입금까지, 한눈에 확인하세요.</p></div><span class="date-tag">오늘 · {{ today|date:"n월 j일 l" }}</span></div>
+    <div class="intro"><div><p class="eyebrow">MY WORK CALENDAR</p><h1>업무 달력</h1><p class="description">일한 날부터 입금까지, 한눈에 확인하세요.</p></div></div>
     <div class="workspace">
       <section class="calendar" aria-label="월별 업무 달력">
         <div class="calendar-toolbar">
-          <div class="month-navigation"><h2>{{ selected|date:"Y년 n월" }}</h2><nav aria-label="달력 월 이동"><a class="arrow" href="?date={{ previous|date:'Y-m-d' }}" aria-label="이전 달">‹</a><a class="arrow" href="?date={{ following|date:'Y-m-d' }}" aria-label="다음 달">›</a></nav><a class="today-link" href="{% url 'calendar' %}">오늘</a></div>
+          <div class="month-navigation"><nav aria-label="달력 월 이동"><a class="arrow" href="?date={{ previous|date:'Y-m-d' }}" aria-label="이전 달">‹</a><h2><button type="button" id="month-picker-button" aria-haspopup="dialog" aria-controls="month-dialog" title="연도와 월 선택">{{ selected|date:"Y년 n월" }}</button></h2><a class="arrow" href="?date={{ following|date:'Y-m-d' }}" aria-label="다음 달">›</a></nav><a class="today-link" href="{% url 'calendar' %}" title="오늘 날짜로 돌아가기">오늘 {{ today|date:"n월 j일 l" }}</a></div>
           <div class="legend"><span><i class="pending"></i>미입금</span><span><i class="paid"></i>입금 완료</span></div>
         </div>
         <table><caption class="sr-only">{{ selected|date:"Y년 n월" }} 달력. 날짜를 선택하면 업무 내용을 확인할 수 있습니다.</caption>
           <thead><tr>{% for weekday in weekdays %}<th scope="col">{{ weekday }}</th>{% endfor %}</tr></thead>
-          <tbody>{% for week in weeks %}<tr>{% for day in week %}<td class="{% if day.month != selected.month %}outside {% endif %}{% if day == selected %}selected{% endif %}"><a class="day" href="?date={{ day|date:'Y-m-d' }}&amp;new=1" aria-label="{{ day|date:'Y년 n월 j일' }}{% if day == today %}, 오늘{% endif %}" {% if day == selected %}aria-current="date"{% endif %}><span class="day-number {% if day == today %}is-today{% endif %}">{{ day.day }}</span>{% if day == today %}<span class="today-label">오늘</span>{% endif %}</a></td>{% endfor %}</tr>{% endfor %}</tbody>
+          <tbody>
+            {% for week in weeks %}<tr>{% for cell in week %}{% with day=cell.date %}
+              <td class="{% if day.month != selected.month %}outside {% endif %}{% if day == selected %}selected{% endif %}">
+                <div class="day" data-date-url="?date={{ day|date:'Y-m-d' }}">
+                  <span class="sr-only">{{ day|date:"Y년 n월 j일" }}</span>
+                  <a class="day-heading" href="?date={{ day|date:'Y-m-d' }}" {% if day == selected %}aria-current="date"{% endif %}><span class="day-number {% if day == today %}is-today{% endif %}">{{ day.day }}</span>{% if day == today %}<span class="today-label">오늘</span>{% endif %}</a>
+                  <span class="day-records">{% for record in cell.records %}<button type="button" data-detail-id="{{ record.pk }}" aria-haspopup="dialog" class="day-company {% if record.status %}paid{% else %}pending{% endif %}" title="{{ record.company_name }} · {% if record.status %}입금 완료{% else %}미입금{% endif %}">{{ record.company_name }}<span class="sr-only"> · {% if record.status %}입금 완료{% else %}미입금{% endif %}</span></button>{% endfor %}</span>
+                </div>
+              </td>
+            {% endwith %}{% endfor %}</tr>{% endfor %}
+          </tbody>
         </table>
         <div class="calendar-footer"><span class="hint-icon" aria-hidden="true">↗</span> 날짜를 선택해 그날의 업무 기록을 확인하세요.</div>
       </section>
@@ -33,23 +43,54 @@
         <button type="button" id="add-record" class="primary-button">근무 내역 추가</button>
         <p id="page-error" role="alert"></p>
         {% for record in work_records %}
-        <article class="detail-note work-record" data-id="{{ record.pk }}" data-date="{{ record.work_date|date:'Y-m-d' }}" data-edit-url="{% url 'work-record-edit' record.pk %}" data-delete-url="{% url 'work-record-delete' record.pk %}" data-status-url="{% url 'work-record-status' record.pk %}">
-          <strong class="record-company">{{ record.company_name }}</strong>
-          <p><span class="record-workplace">{{ record.workplace }}</span> · <span class="record-industry">{{ record.industry }}</span></p>
-          <p><span class="record-amount">{{ record.amount }}</span>원 · <span class="status-badge {% if record.status %}paid{% else %}pending{% endif %}">{% if record.status %}입금 완료{% else %}미입금{% endif %}</span></p>
-          <p class="record-notes">{{ record.notes }}</p>
+        <article tabindex="0" aria-label="{{ record.company_name }} 상세 내역 보기" aria-haspopup="dialog" data-detail-id="{{ record.pk }}" class="detail-note work-record" data-id="{{ record.pk }}" data-date="{{ record.work_date|date:'Y-m-d' }}" data-edit-url="{% url 'work-record-edit' record.pk %}" data-delete-url="{% url 'work-record-delete' record.pk %}" data-status-url="{% url 'work-record-status' record.pk %}">
+          <strong>업체명 : <span class="record-company">{{ record.company_name }}</span></strong>
+          <p>근무지 : <span class="record-workplace">{{ record.workplace }}</span></p>
+          <p>업종 : <span class="record-industry">{{ record.industry }}</span></p>
+          <p>금액 : <span class="record-amount">{{ record.amount|floatformat:"0g" }}</span>원 · <span class="status-badge {% if record.status %}paid{% else %}pending{% endif %}">{% if record.status %}입금 완료{% else %}미입금{% endif %}</span></p>
+          <p>비고 : <span class="record-notes">{{ record.notes }}</span>{% if not record.notes %}없음{% endif %}</p>
           <div class="record-actions">
             <button type="button" data-action="edit">수정</button>
             <button type="button" data-action="delete" class="danger-button">삭제</button>
             <button type="button" data-action="status" data-status="{% if record.status %}false{% else %}true{% endif %}">{% if record.status %}미입금으로 변경{% else %}입금 완료로 변경{% endif %}</button>
           </div>
         </article>
-        {% empty %}<div class="empty-state"><div class="empty-icon" aria-hidden="true">▤</div><h3>아직 기록된 업무가 없어요</h3><p>날짜를 선택하거나 추가 버튼을 눌러<br>근무 내역을 기록해 보세요.</p></div>{% endfor %}
+        {% empty %}<div class="empty-state"><div class="empty-icon" aria-hidden="true">▤</div><h3>아직 기록된 업무가 없어요</h3><p>추가 버튼을 눌러<br>선택한 날짜의 근무 내역을 기록해 보세요.</p></div>{% endfor %}
       </aside>
     </div>
     <footer class="page-footer">일의 기록 <span>매일의 수고가 빠짐없이 남도록.</span></footer>
   </main>
-  <dialog id="work-dialog" aria-labelledby="work-dialog-title" data-open="{% if open_create %}true{% else %}false{% endif %}">
+  <dialog id="record-detail-dialog" aria-labelledby="record-detail-title">
+    <div class="dialog-heading"><h2 id="record-detail-title">근무 상세 내역</h2><button type="button" data-detail-close aria-label="닫기">✕</button></div>
+    <div id="record-detail-content"></div>
+    <div class="dialog-actions"><button type="button" data-detail-close>닫기</button></div>
+  </dialog>
+  {% for week in weeks %}{% for cell in week %}{% for record in cell.records %}
+  <template id="record-detail-{{ record.pk }}">
+    <dl class="record-detail-fields">
+      <dt>업체명</dt><dd>{{ record.company_name }}</dd>
+      <dt>근무일</dt><dd>{{ record.work_date|date:"Y년 n월 j일 l" }}</dd>
+      <dt>근무지</dt><dd>{{ record.workplace }}</dd>
+      <dt>업종</dt><dd>{{ record.industry }}</dd>
+      <dt>금액</dt><dd>{{ record.amount|floatformat:"0g" }}원</dd>
+      <dt>입금 상태</dt><dd><span class="status-badge {% if record.status %}paid{% else %}pending{% endif %}">{% if record.status %}입금 완료{% else %}미입금{% endif %}</span></dd>
+      <dt>비고</dt><dd class="detail-notes">{{ record.notes|default:"없음" }}</dd>
+      <dt>등록일</dt><dd>{{ record.created_at|date:"Y-m-d H:i" }}</dd>
+      <dt>수정일</dt><dd>{{ record.updated_at|date:"Y-m-d H:i:s" }}</dd>
+    </dl>
+  </template>
+  {% endfor %}{% endfor %}{% endfor %}
+  <dialog id="month-dialog" aria-labelledby="month-dialog-title">
+    <form id="month-form" action="{% url 'calendar' %}" method="get">
+      <div class="dialog-heading"><h2 id="month-dialog-title">연도와 월 선택</h2><button type="button" data-month-close aria-label="닫기">✕</button></div>
+      <div class="month-fields">
+        <div class="work-field"><label for="calendar-year">연도</label><input id="calendar-year" type="number" min="2" max="9998" step="1" value="{{ selected|date:'Y' }}" required inputmode="numeric"></div>
+        <div class="work-field"><label for="calendar-month">월</label><select id="calendar-month"><option value="1" {% if selected.month == 1 %}selected{% endif %}>1월</option><option value="2" {% if selected.month == 2 %}selected{% endif %}>2월</option><option value="3" {% if selected.month == 3 %}selected{% endif %}>3월</option><option value="4" {% if selected.month == 4 %}selected{% endif %}>4월</option><option value="5" {% if selected.month == 5 %}selected{% endif %}>5월</option><option value="6" {% if selected.month == 6 %}selected{% endif %}>6월</option><option value="7" {% if selected.month == 7 %}selected{% endif %}>7월</option><option value="8" {% if selected.month == 8 %}selected{% endif %}>8월</option><option value="9" {% if selected.month == 9 %}selected{% endif %}>9월</option><option value="10" {% if selected.month == 10 %}selected{% endif %}>10월</option><option value="11" {% if selected.month == 11 %}selected{% endif %}>11월</option><option value="12" {% if selected.month == 12 %}selected{% endif %}>12월</option></select></div>
+      </div>
+      <div class="dialog-actions"><button type="button" data-month-close>취소</button><button type="submit" class="primary-button">이동</button></div>
+    </form>
+  </dialog>
+  <dialog id="work-dialog" aria-labelledby="work-dialog-title">
     <form id="work-form" action="{% url 'work-record-create' %}" method="post" data-date="{{ selected|date:'Y-m-d' }}" data-calendar-url="{% url 'calendar' %}">
       {% csrf_token %}
       <div class="dialog-heading"><h2 id="work-dialog-title">근무 내역 추가</h2><button type="button" data-close aria-label="닫기">✕</button></div>
@@ -66,6 +107,6 @@
       <div class="dialog-actions"><button type="button" data-close autofocus>취소</button><button type="submit" class="danger-button">삭제</button></div>
     </form>
   </dialog>
-  <script src="{% static 'worklogs/calendar.js' %}" defer></script>
+  <script src="{% static 'worklogs/calendar.js' %}?v=3" defer></script>
 </body>
 </html>

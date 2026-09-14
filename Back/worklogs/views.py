@@ -100,15 +100,21 @@ def calendar_view(request):
     previous = date(year - (month == 1), 12 if month == 1 else month - 1, 1)
     following = date(year + (month == 12), 1 if month == 12 else month + 1, 1)
     weeks = calendar.Calendar(firstweekday=6).monthdatescalendar(year, month)
+    records_by_date = {}
+    for record in user.work_records.filter(work_date__range=(weeks[0][0], weeks[-1][-1])):
+        records_by_date.setdefault(record.work_date, []).append(record)
+    calendar_weeks = [
+        [{"date": day, "records": records_by_date.get(day, [])} for day in week]
+        for week in weeks
+    ]
     return render(request, "worklogs/calendar.html", {
         "today": today,
         "selected": selected,
         "previous": previous,
         "following": following,
-        "weeks": weeks,
+        "weeks": calendar_weeks,
         "work_form": WorkInfoForm(initial={"work_date": selected}),
-        "open_create": request.GET.get("new") == "1",
-        "work_records": user.work_records.filter(work_date=selected),
+        "work_records": records_by_date.get(selected, []),
         "weekdays": ["일", "월", "화", "수", "목", "금", "토"],
     })
 

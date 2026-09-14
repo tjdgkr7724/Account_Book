@@ -1,4 +1,56 @@
 (() => {
+  const detailDialog = document.querySelector('#record-detail-dialog');
+  let detailTrigger;
+  function openDetail(trigger) {
+    const template = document.getElementById(`record-detail-${trigger.dataset.detailId}`);
+    if (!template) return;
+    detailTrigger = trigger;
+    document.querySelector('#record-detail-content').replaceChildren(template.content.cloneNode(true));
+    detailDialog.showModal();
+  }
+  document.querySelectorAll('[data-detail-id]').forEach(trigger => {
+    trigger.addEventListener('click', event => {
+      if (event.target.closest('[data-action]')) return;
+      event.stopPropagation();
+      openDetail(trigger);
+    });
+    if (trigger.tagName === 'ARTICLE') {
+      trigger.addEventListener('keydown', event => {
+        if (event.target !== trigger || !['Enter', ' '].includes(event.key)) return;
+        event.preventDefault();
+        openDetail(trigger);
+      });
+    }
+  });
+  detailDialog.querySelectorAll('[data-detail-close]').forEach(button => {
+    button.addEventListener('click', () => detailDialog.close());
+  });
+  detailDialog.addEventListener('close', () => detailTrigger?.focus());
+  document.querySelectorAll('[data-date-url]').forEach(day => {
+    day.addEventListener('click', event => {
+      if (!event.target.closest('button, a')) window.location.assign(day.dataset.dateUrl);
+    });
+  });
+  const monthDialog = document.querySelector('#month-dialog');
+  const monthForm = document.querySelector('#month-form');
+  const monthButton = document.querySelector('#month-picker-button');
+  monthButton.addEventListener('click', () => {
+    monthForm.reset();
+    monthDialog.showModal();
+    document.querySelector('#calendar-year').focus();
+    document.querySelector('#calendar-year').select();
+  });
+  monthDialog.querySelectorAll('[data-month-close]').forEach(button => {
+    button.addEventListener('click', () => monthDialog.close());
+  });
+  monthDialog.addEventListener('close', () => monthButton.focus());
+  monthForm.addEventListener('submit', event => {
+    event.preventDefault();
+    if (!monthForm.reportValidity()) return;
+    const year = String(Number(document.querySelector('#calendar-year').value)).padStart(4, '0');
+    const month = document.querySelector('#calendar-month').value.padStart(2, '0');
+    window.location.assign(`${monthForm.action}?${new URLSearchParams({date: `${year}-${month}-01`})}`);
+  });
   const dialog = document.querySelector('#work-dialog');
   const form = document.querySelector('#work-form');
   const deleteDialog = document.querySelector('#delete-dialog');
@@ -135,12 +187,4 @@
     } catch (error) { document.querySelector('#delete-error').textContent = error.message; }
     finally { busy(deleteForm, false); }
   });
-  if (dialog.dataset.open === 'true') {
-    returnFocus = document.querySelector('#add-record');
-    openForm();
-    returnFocus = document.querySelector('#add-record');
-    const url = new URL(window.location.href);
-    url.searchParams.delete('new');
-    window.history.replaceState(null, '', url);
-  }
 })();
