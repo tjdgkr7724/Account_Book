@@ -5,7 +5,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>{{ selected|date:"Y년 n월" }} 달력 · 일의 기록</title>
-  <link rel="stylesheet" href="{% static 'worklogs/calendar.css' %}?v=4">
+  <link rel="stylesheet" href="{% static 'worklogs/calendar.css' %}?v=5">
   <link rel="stylesheet" href="{% static 'worklogs/auth.css' %}">
   <link rel="stylesheet" href="{% static 'worklogs/work-form.css' %}?v=3">
 </head>
@@ -22,6 +22,11 @@
           <div class="month-navigation"><nav aria-label="달력 월 이동"><a class="arrow" href="?date={{ previous|date:'Y-m-d' }}" aria-label="이전 달">‹</a><h2><button type="button" id="month-picker-button" aria-haspopup="dialog" aria-controls="month-dialog" title="연도와 월 선택">{{ selected|date:"Y년 n월" }}</button></h2><a class="arrow" href="?date={{ following|date:'Y-m-d' }}" aria-label="다음 달">›</a></nav><a class="today-link" href="{% url 'calendar' %}" title="오늘 날짜로 돌아가기">오늘 {{ today|date:"n월 j일 l" }}</a></div>
           <div class="legend"><span><i class="pending"></i>미입금</span><span><i class="paid"></i>입금 완료</span></div>
         </div>
+        <dl class="monthly-summary" aria-label="{{ selected|date:'Y년 n월' }} 근무 금액 합계">
+          <div class="summary-total"><dt>총액</dt><dd>{{ monthly_totals.total|floatformat:"0g" }}<span>원</span></dd></div>
+          <div class="summary-pending"><dt>입금 전</dt><dd>{{ monthly_totals.pending|floatformat:"0g" }}<span>원</span></dd></div>
+          <div class="summary-paid"><dt>입금 후</dt><dd>{{ monthly_totals.paid|floatformat:"0g" }}<span>원</span></dd></div>
+        </dl>
         <table><caption class="sr-only">{{ selected|date:"Y년 n월" }} 달력. 날짜를 선택하면 업무 내용을 확인할 수 있습니다.</caption>
           <thead><tr>{% for weekday in weekdays %}<th scope="col">{{ weekday }}</th>{% endfor %}</tr></thead>
           <tbody>

@@ -101,8 +101,12 @@ def calendar_view(request):
     following = date(year + (month == 12), 1 if month == 12 else month + 1, 1)
     weeks = calendar.Calendar(firstweekday=6).monthdatescalendar(year, month)
     records_by_date = {}
+    monthly_totals = {"total": 0, "pending": 0, "paid": 0}
     for record in user.work_records.filter(work_date__range=(weeks[0][0], weeks[-1][-1])):
         records_by_date.setdefault(record.work_date, []).append(record)
+        if record.work_date.year == year and record.work_date.month == month:
+            monthly_totals["total"] += record.amount
+            monthly_totals["paid" if record.status else "pending"] += record.amount
     calendar_weeks = [
         [{"date": day, "records": records_by_date.get(day, [])} for day in week]
         for week in weeks
@@ -113,6 +117,7 @@ def calendar_view(request):
         "previous": previous,
         "following": following,
         "weeks": calendar_weeks,
+        "monthly_totals": monthly_totals,
         "work_form": WorkInfoForm(initial={"work_date": selected}),
         "work_records": records_by_date.get(selected, []),
         "weekdays": ["일", "월", "화", "수", "목", "금", "토"],
