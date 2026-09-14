@@ -17,7 +17,7 @@ Including another URLconf
 
 from django.contrib import admin
 from django.urls import path
-from worklogs.views import calendar_view, home_view, login_view, logout_view, signup_view, work_records_view
+from worklogs.views import calendar_view, home_view, login_view, logout_view, signup_view, work_records_view, work_record_write_view
 
 urlpatterns = [
     path("", home_view, name="home"),
@@ -26,5 +26,9 @@ urlpatterns = [
     path("logout/", logout_view, name="logout"),
     path("calendar/", calendar_view, name="calendar"),
     path("api/work-records/", work_records_view, name="work-records"),
+    path("api/work-records/create/", work_record_write_view, name="work-record-create"),
+    path("api/work-records/<int:record_id>/edit/", work_record_write_view, {"action": "edit"}, name="work-record-edit"),
+    path("api/work-records/<int:record_id>/delete/", work_record_write_view, {"action": "delete"}, name="work-record-delete"),
+    path("api/work-records/<int:record_id>/status/", work_record_write_view, {"action": "status"}, name="work-record-status"),
     path("admin/", admin.site.urls),
 ]

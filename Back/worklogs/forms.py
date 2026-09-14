@@ -3,7 +3,28 @@ from django.contrib.auth.models import User
 from django.contrib.auth.password_validation import validate_password
 from django.utils import timezone
 
-from .models import UserInfo
+from .models import UserInfo, WorkInfo
+
+
+class WorkInfoForm(forms.ModelForm):
+    amount = forms.IntegerField(
+        label="금액(원)", min_value=0, max_value=9223372036854775807,
+        widget=forms.TextInput(attrs={"inputmode": "numeric", "pattern": "[0-9,]+", "placeholder": "예: 100,000"}),
+    )
+
+    class Meta:
+        model = WorkInfo
+        fields = ["company_name", "workplace", "work_date", "industry", "amount", "notes"]
+        widgets = {
+            "work_date": forms.DateInput(attrs={"type": "date", "min": "0002-01-01", "max": "9998-12-31"}, format="%Y-%m-%d"),
+            "notes": forms.Textarea(attrs={"rows": 3}),
+        }
+
+    def clean_work_date(self):
+        value = self.cleaned_data["work_date"]
+        if not 2 <= value.year <= 9998:
+            raise forms.ValidationError("날짜는 0002년부터 9998년까지 입력할 수 있습니다.")
+        return value
 
 
 class LoginForm(forms.Form):

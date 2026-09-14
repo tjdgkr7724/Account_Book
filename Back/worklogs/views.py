@@ -12,7 +12,7 @@ from django.utils import timezone
 from django.views.decorators.cache import never_cache
 from django.views.decorators.http import require_POST, require_http_methods
 
-from .forms import LoginForm, SignupForm
+from .forms import LoginForm, SignupForm, WorkInfoForm
 from .models import UserInfo
 
 
@@ -106,6 +106,8 @@ def calendar_view(request):
         "previous": previous,
         "following": following,
         "weeks": weeks,
+        "work_form": WorkInfoForm(initial={"work_date": selected}),
+        "open_create": request.GET.get("new") == "1",
         "work_records": user.work_records.filter(work_date=selected),
         "weekdays": ["일", "월", "화", "수", "목", "금", "토"],
     })
@@ -129,3 +131,39 @@ def work_records_view(request):
         "id", "company_name", "workplace", "work_date", "industry", "amount",
         "status", "notes", "created_at", "updated_at",
     ))})
+
+
+@never_cache
+@require_POST
+def work_record_write_view(request, record_id=None, action="create"):
+    user = session_user(request)
+    if user is None:
+        return JsonResponse({"error": "로그인이 필요합니다."}, status=401)
+    record = None
+    if record_id is not None:
+        record = user.work_records.filter(pk=record_id).first()
+        if record is None:
+            return JsonResponse({"error": "업무 내역을 찾을 수 없습니다."}, status=404)
+    if action == "delete":
+        record.delete()
+        return JsonResponse({"deleted": True})
+    if action == "status":
+        value = request.POST.get("status")
+        if value not in ("true", "false"):
+            return JsonResponse({"error": "입금 상태는 true 또는 false여야 합니다."}, status=400)
+        record.status = value == "true"
+        record.save(update_fields=["status", "updated_at"])
+    else:
+        form = WorkInfoForm(request.POST, instance=record)
+        if not form.is_valid():
+            return JsonResponse({"errors": form.errors.get_json_data()}, status=400)
+        record = form.save(commit=False)
+        if action == "create":
+            record.user = user
+            record.status = False
+            record.save()
+        else:
+            # Do not overwrite a status changed concurrently by another request.
+            record.save(update_fields=[*form.Meta.fields, "updated_at"])
+    return JsonResponse({"id": record.pk, "work_date": record.work_date, "status": record.status},
+                        status=201 if action == "create" else 200)
